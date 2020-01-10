@@ -3,7 +3,7 @@
 ## Table of Contents
 
 1. [Introduction](#intro)
-2. [Additional software](#soft)
+2. [Software](#software)
 3. [Usage](#usage)
 4. [Conclusion](#conclusion)
 
@@ -13,7 +13,7 @@ In fact, most real UEFI firmwares are building using [edk2](https://github.com/t
 
 `debug-efi-elf-modules` directory contains some UEFI images with debugging information that were obtained when building `MdeModulePkg` and `OvmfPkg` packages from [edk2](https://github.com/tianocore/edk2).
 
-## [Additional software](#soft)
+## [Software](#software)
 
 * [IDA Pro](https://www.hex-rays.com/products/ida/)
 * [BinDiff](https://www.zynamics.com/bindiff.html) with IDA Pro plugin
