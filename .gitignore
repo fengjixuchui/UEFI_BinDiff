@@ -17,4 +17,4 @@ __pycache__/
 debug-efi-elf-modules/
 
 # Files
-config.json
+# config.json
