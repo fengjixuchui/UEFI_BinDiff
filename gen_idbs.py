@@ -41,8 +41,6 @@ ANALYSER_PATH = config['ANALYSER_PATH']
 IDA_PATH = '"{}"'.format(config['IDA_PATH'])
 IDA64_PATH = '"{}"'.format(config['IDA64_PATH'])
 
-DEBUG_FILES = []
-
 # lief machine type constants
 LIEF_IA32 = 'ARCH.i386'
 LIEF_X64 = 'ARCH.x86_64'
