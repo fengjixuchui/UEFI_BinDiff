@@ -1,4 +1,4 @@
-# UEFI Modules Analysing with BinDiff IDA plugin
+# UEFI modules analysing with BinDiff IDA plugin
 
 ## Table of Contents
 
