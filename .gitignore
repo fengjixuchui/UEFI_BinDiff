@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDA
+*.id[b12]
+*.i64
+*.nam
+*.til
+
+# Debug modules
+*.debug
+
+# Directories
+.vscode/
+
+# Files
+config.json
