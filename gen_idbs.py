@@ -102,4 +102,4 @@ class dbgs_analyser:
 if __name__ == "__main__":
     start_time = time.time()
     dbgs_analyser.do(EFI_MODULES)
-    print('[time] {}'.format(time.time() - start_time))
+    print('[time] {} s.'.format(round(time.time() - start_time, 3)))
