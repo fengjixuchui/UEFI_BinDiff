@@ -1,17 +1,17 @@
 # MIT License
-# 
+#
 # Copyright (c) 2020 yeggor
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,30 +22,32 @@
 
 import json
 import os
+import time
 
 import click
 
 import lief
 
-__author__ = 'yeggor'
-__version__ = '1.0.0'
+__author__ = "yeggor"
+__version__ = "1.0.0"
 
 # reads configuration data
-with open('config.json', 'rb') as cfile:
-	config = json.load(cfile)
+with open("config.json", "rb") as cfile:
+    config = json.load(cfile)
 
 # gets configuration data
-EFI_MODULES = config['EFI_MODULES']
-assert(os.path.isdir(EFI_MODULES))
-ANALYSER_PATH = config['ANALYSER_PATH']
-IDA_PATH = '"{}"'.format(config['IDA_PATH'])
-IDA64_PATH = '"{}"'.format(config['IDA64_PATH'])
+EFI_MODULES = config["EFI_MODULES"]
+assert os.path.isdir(EFI_MODULES)
+ANALYSER_PATH = config["ANALYSER_PATH"]
+IDA_PATH = '"{}"'.format(config["IDA_PATH"])
+IDA64_PATH = '"{}"'.format(config["IDA64_PATH"])
 
 # lief machine type constants
-LIEF_IA32 = 'ARCH.i386'
-LIEF_X64 = 'ARCH.x86_64'
+LIEF_IA32 = "ARCH.i386"
+LIEF_X64 = "ARCH.x86_64"
 
-class dbgs_analyser():
+
+class dbgs_analyser:
     def __init__(self, dirname):
         self.files = []
         self.root_dir = dirname
@@ -57,37 +59,36 @@ class dbgs_analyser():
             if os.path.isfile(new_item):
                 self.files.append(new_item)
             if os.path.isdir(new_item):
-                self._get_files(new_item)   
+                self._get_files(new_item)
 
     def _show_item(self, item):
-	    return 'current module: {}'.format(item)
+        return "current module: {}".format(item)
 
     def _handle_all(self):
         with click.progressbar(
-		    self.files,
-		    length=len(self.files),
-		    bar_template=click.style('%(label)s  %(bar)s | %(info)s', fg='cyan'),
-		    label='Modules analysis',
-		    item_show_func=self._show_item,
-	    ) as bar:
+                self.files,
+                length=len(self.files),
+                bar_template=click.style("%(label)s  %(bar)s | %(info)s",
+                                         fg="cyan"),
+                label="Modules analysis",
+                item_show_func=self._show_item,
+        ) as bar:
             for elf in bar:
                 _, ext = os.path.splitext(elf)
-                if ext != '.debug':
+                if ext != ".debug":
                     continue
                 binary = lief.parse(elf)
                 if str(binary.header.machine_type) == LIEF_IA32:
                     ida_path = IDA_PATH
                 if str(binary.header.machine_type) == LIEF_X64:
                     ida_path = IDA64_PATH
-                cmd_line = ' '.join([
-                    ida_path,
-                    '-c -A -S{}'.format(ANALYSER_PATH),
-                    elf
-                ])
-                if os.system(cmd_line):
-                    msg = '[-] Error during {module} module processing\n\t{hint}'.format(
+                cmd_line = " ".join(
+                    [ida_path, "-c -A -S{}".format(ANALYSER_PATH), elf])
+                if not os.system(cmd_line):
+                    msg = "[-] Error during {module} module processing\n\t{hint}".format(
                         module=elf,
-                        hint='check your config.json file or move analyse_and_exit.py file to idc directory'
+                        hint=
+                        "check your config.json file or move analyse_and_exit.py file to idc directory",
                     )
                     exit(msg)
 
@@ -97,19 +98,8 @@ class dbgs_analyser():
         cls._get_files(cls.root_dir)
         return cls._handle_all()
 
-def test():
-    module_path = os.path.join(
-        'debug-efi-elf-modules',
-        'X64',
-        'MdeModule',
-        'AcpiPlatform.debug'
-    )
-    cmd_line = ' '.join([
-        IDA64_PATH,
-        '-c -A -S{}'.format(ANALYSER_PATH),
-        module_path
-	])
-    os.system(cmd_line)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    start_time = time.time()
     dbgs_analyser.do(EFI_MODULES)
+    print('[time] {} s.'.format(round(time.time() - start_time, 3)))
