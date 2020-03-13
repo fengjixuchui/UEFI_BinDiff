@@ -22,6 +22,7 @@
 
 import json
 import os
+import time
 
 import click
 
@@ -65,11 +66,12 @@ class dbgs_analyser:
 
     def _handle_all(self):
         with click.progressbar(
-            self.files,
-            length=len(self.files),
-            bar_template=click.style("%(label)s  %(bar)s | %(info)s", fg="cyan"),
-            label="Modules analysis",
-            item_show_func=self._show_item,
+                self.files,
+                length=len(self.files),
+                bar_template=click.style("%(label)s  %(bar)s | %(info)s",
+                                         fg="cyan"),
+                label="Modules analysis",
+                item_show_func=self._show_item,
         ) as bar:
             for elf in bar:
                 _, ext = os.path.splitext(elf)
@@ -80,11 +82,13 @@ class dbgs_analyser:
                     ida_path = IDA_PATH
                 if str(binary.header.machine_type) == LIEF_X64:
                     ida_path = IDA64_PATH
-                cmd_line = " ".join([ida_path, "-c -A -S{}".format(ANALYSER_PATH), elf])
-                if os.system(cmd_line):
+                cmd_line = " ".join(
+                    [ida_path, "-c -A -S{}".format(ANALYSER_PATH), elf])
+                if not os.system(cmd_line):
                     msg = "[-] Error during {module} module processing\n\t{hint}".format(
                         module=elf,
-                        hint="check your config.json file or move analyse_and_exit.py file to idc directory",
+                        hint=
+                        "check your config.json file or move analyse_and_exit.py file to idc directory",
                     )
                     exit(msg)
 
@@ -95,13 +99,7 @@ class dbgs_analyser:
         return cls._handle_all()
 
 
-def test():
-    module_path = os.path.join(
-        "debug-efi-elf-modules", "X64", "MdeModule", "AcpiPlatform.debug"
-    )
-    cmd_line = " ".join([IDA64_PATH, "-c -A -S{}".format(ANALYSER_PATH), module_path])
-    os.system(cmd_line)
-
-
 if __name__ == "__main__":
+    start_time = time.time()
     dbgs_analyser.do(EFI_MODULES)
+    print('[time] {}'.format(time.time() - start_time))
