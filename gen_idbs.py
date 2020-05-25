@@ -1,6 +1,9 @@
+#!/usr/bin/env python3.7
+
+################################################################################
 # MIT License
 #
-# Copyright (c) 2020 yeggor
+# Copyright (c) 2018-2020 yeggor
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,36 +22,79 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+################################################################################
 
 import json
 import os
+import subprocess
 import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import click
-
 import lief
+from tqdm import tqdm
 
-__author__ = "yeggor"
-__version__ = "1.0.0"
+__author__ = 'yeggor'
+__version__ = '1.0.0'
 
 # reads configuration data
-with open("config.json", "rb") as cfile:
+with open('config.json', 'rb') as cfile:
     config = json.load(cfile)
 
 # gets configuration data
-EFI_MODULES = config["EFI_MODULES"]
-assert os.path.isdir(EFI_MODULES)
-ANALYSER_PATH = config["ANALYSER_PATH"]
-IDA_PATH = '"{}"'.format(config["IDA_PATH"])
-IDA64_PATH = '"{}"'.format(config["IDA64_PATH"])
+ANALYSER_PATH = config['ANALYSER_PATH']
+IDA_PATH = config['IDA_PATH']
+IDA64_PATH = config['IDA64_PATH']
 
 # lief machine type constants
-LIEF_IA32 = "ARCH.i386"
-LIEF_X64 = "ARCH.x86_64"
+LIEF_IA32 = 'ARCH.i386'
+LIEF_X64 = 'ARCH.x86_64'
+
+
+def analyse_module(module_path, scr_path, idat, idat64):
+    _, ext = os.path.splitext(module_path)
+    if ext != '.debug':
+        return False
+    binary = lief.parse(module_path)
+    if str(binary.header.machine_type) == LIEF_IA32:
+        ida_path = idat
+    elif str(binary.header.machine_type) == LIEF_X64:
+        ida_path = idat64
+    else:
+        return False
+    # analyse module in batch mode
+    process = subprocess.Popen(
+        [ida_path, '-A', '-S{}'.format(scr_path), module_path],
+        stdout=subprocess.PIPE)
+    # ignore stdout, stderr
+    _, _ = process.communicate()
+    if not (os.path.isfile('{}.i64'.format(module_path))
+            or os.path.isfile('{}.idb'.format(module_path))):
+        print('[ERROR] module: {}'.format(module_path))
+        exit()
+    return True
+
+
+def analyse_all(files, scr_path, max_workers, idat, idat64):
+    # check first module
+    analyse_module(files[0], scr_path, idat, idat64)
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(analyse_module, module, scr_path, idat, idat64)
+            for module in files[1:]
+        ]
+        params = {
+            'total': len(futures),
+            'unit': 'module',
+            'unit_scale': True,
+            'leave': True
+        }
+        for f in tqdm(as_completed(futures), **params):
+            pass
 
 
 class dbgs_analyser:
-    def __init__(self, dirname):
+    def __init__(self, dirname, workers):
         self.files = []
         self.root_dir = dirname
 
@@ -61,45 +107,31 @@ class dbgs_analyser:
             if os.path.isdir(new_item):
                 self._get_files(new_item)
 
-    def _show_item(self, item):
-        return "current module: {}".format(item)
-
-    def _handle_all(self):
-        with click.progressbar(
-                self.files,
-                length=len(self.files),
-                bar_template=click.style("%(label)s  %(bar)s | %(info)s",
-                                         fg="cyan"),
-                label="Modules analysis",
-                item_show_func=self._show_item,
-        ) as bar:
-            for elf in bar:
-                _, ext = os.path.splitext(elf)
-                if ext != ".debug":
-                    continue
-                binary = lief.parse(elf)
-                if str(binary.header.machine_type) == LIEF_IA32:
-                    ida_path = IDA_PATH
-                if str(binary.header.machine_type) == LIEF_X64:
-                    ida_path = IDA64_PATH
-                cmd_line = " ".join(
-                    [ida_path, "-c -A -S{}".format(ANALYSER_PATH), elf])
-                if not os.system(cmd_line):
-                    msg = "[-] Error during {module} module processing\n\t{hint}".format(
-                        module=elf,
-                        hint=
-                        "check your config.json file or move analyse_and_exit.py file to idc directory",
-                    )
-                    exit(msg)
-
     @classmethod
-    def do(cls, dirname):
-        cls = cls(dirname)
+    def do(cls, dirname, workers):
+        cls = cls(dirname, workers)
         cls._get_files(cls.root_dir)
-        return cls._handle_all()
+        analyse_all(cls.files, ANALYSER_PATH, workers, IDA_PATH, IDA64_PATH)
 
 
-if __name__ == "__main__":
+@click.command()
+@click.argument('modules_dir')
+@click.option('-w',
+              '--workers',
+              help='Number of workers (8 by default).',
+              type=int)
+def main(modules_dir, workers):
+    """Get idb and i64 files from modules in specified directory"""
+    if not os.path.isdir(modules_dir):
+        print('[ERROR] check modules directory')
+        return False
+    if not workers:
+        workers = 8
     start_time = time.time()
-    dbgs_analyser.do(EFI_MODULES)
+    dbgs_analyser.do(modules_dir, workers)
     print('[time] {} s.'.format(round(time.time() - start_time, 3)))
+    return True
+
+
+if __name__ == '__main__':
+    main()
