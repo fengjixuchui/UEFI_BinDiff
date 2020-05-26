@@ -26,12 +26,11 @@
 
 import json
 import os
-import subprocess
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import click
-import lief
+from elftools.elf.elffile import ELFFile
 from tqdm import tqdm
 
 __author__ = 'yeggor'
@@ -41,33 +40,34 @@ __version__ = '1.0.0'
 with open('config.json', 'rb') as cfile:
     config = json.load(cfile)
 
-# gets configuration data
+# configuration data
 ANALYSER_PATH = config['ANALYSER_PATH']
-IDA_PATH = config['IDA_PATH']
-IDA64_PATH = config['IDA64_PATH']
+IDA_PATH = '"{}"'.format(config['IDA_PATH'])
+IDA64_PATH = '"{}"'.format(config['IDA64_PATH'])
 
-# lief machine type constants
-LIEF_IA32 = 'ARCH.i386'
-LIEF_X64 = 'ARCH.x86_64'
+
+def get_machine_arch(module_path):
+    with open(module_path, 'rb') as f:
+        elffile = ELFFile(f)
+        if not elffile.has_dwarf_info():
+            return None
+    return elffile.get_machine_arch()
 
 
 def analyse_module(module_path, scr_path, idat, idat64):
     _, ext = os.path.splitext(module_path)
     if ext != '.debug':
         return False
-    binary = lief.parse(module_path)
-    if str(binary.header.machine_type) == LIEF_IA32:
-        ida_path = idat
-    elif str(binary.header.machine_type) == LIEF_X64:
-        ida_path = idat64
+    arch = get_machine_arch(module_path)
+    if arch == 'x86':
+        idat_path = idat
+    elif arch == 'x64':
+        idat_path = idat64
     else:
         return False
+    cmd = ' '.join([idat_path, '-c -A -S{}'.format(scr_path), module_path])
     # analyse module in batch mode
-    process = subprocess.Popen(
-        [ida_path, '-A', '-S{}'.format(scr_path), module_path],
-        stdout=subprocess.PIPE)
-    # ignore stdout, stderr
-    _, _ = process.communicate()
+    os.system(cmd)
     if not (os.path.isfile('{}.i64'.format(module_path))
             or os.path.isfile('{}.idb'.format(module_path))):
         print('[ERROR] module: {}'.format(module_path))
@@ -89,7 +89,7 @@ def analyse_all(files, scr_path, max_workers, idat, idat64):
             'unit_scale': True,
             'leave': True
         }
-        for f in tqdm(as_completed(futures), **params):
+        for _ in tqdm(as_completed(futures), **params):
             pass
 
 
@@ -133,5 +133,6 @@ def main(modules_dir, workers):
     return True
 
 
+# pylint: disable=no-value-for-parameter
 if __name__ == '__main__':
     main()
