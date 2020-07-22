@@ -34,7 +34,7 @@ from elftools.elf.elffile import ELFFile
 from tqdm import tqdm
 
 __author__ = 'yeggor'
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 # reads configuration data
 with open('config.json', 'rb') as cfile:
@@ -45,8 +45,34 @@ ANALYSER_PATH = config['ANALYSER_PATH']
 IDA_PATH = '"{}"'.format(config['IDA_PATH'])
 IDA64_PATH = '"{}"'.format(config['IDA64_PATH'])
 
+# PE constants
+PE_OFFSET = 0x3c
+IMAGE_FILE_MACHINE_IA64 = 0x8664
+IMAGE_FILE_MACHINE_I386 = 0x014c
 
-def get_machine_arch(module_path):
+
+def get_num_le(bytearr):
+    num_le = 0
+    for i in range(len(bytearr)):
+        num_le += bytearr[i] * pow(256, i)
+    return num_le
+
+
+def get_machine_type_pe(module_path):
+    with open(module_path, 'rb') as module:
+        data = module.read()
+    PE_POINTER = get_num_le(data[PE_OFFSET:PE_OFFSET + 1:])
+    FH_POINTER = PE_POINTER + 4
+    machine_type = data[FH_POINTER:FH_POINTER + 2:]
+    type_value = get_num_le(machine_type)
+    if type_value == IMAGE_FILE_MACHINE_IA64:
+        return 'x64'
+    if type_value == IMAGE_FILE_MACHINE_I386:
+        return 'x64'
+    return None
+
+
+def get_machine_type_elf(module_path):
     with open(module_path, 'rb') as f:
         elffile = ELFFile(f)
         if not elffile.has_dwarf_info():
@@ -55,10 +81,16 @@ def get_machine_arch(module_path):
 
 
 def analyse_module(module_path, scr_path, idat, idat64):
-    _, ext = os.path.splitext(module_path)
-    if ext != '.debug':
+    # get machine type
+    with open(module_path, 'rb') as f:
+        header = f.read(2)
+    if header == b'\x4d\x5a':
+        arch = get_machine_type_pe(module_path)
+    elif header == b'\x7f\x45':
+        arch = get_machine_type_elf(module_path)
+    else:
         return False
-    arch = get_machine_arch(module_path)
+    # get idat executable
     if arch == 'x86':
         idat_path = idat
     elif arch == 'x64':
