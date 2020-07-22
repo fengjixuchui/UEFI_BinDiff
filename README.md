@@ -35,7 +35,7 @@ In fact, most real UEFI firmwares are building using [edk2](https://github.com/t
 * build efi modules with debug information
 
     * open Developer Command Prompt for VS
-    * run `python edk2_build` from `UEFI_BinDiff` directory
+    * run `python edk2_build.py` from `UEFI_BinDiff` directory
     * if everything went well, you should see the `efi_modules` directory with `.efi` files
     * otherwise, you need to look for the reason [here](https://github.com/tianocore/tianocore.github.io/wiki/Getting-Started-with-EDK-II)
 
