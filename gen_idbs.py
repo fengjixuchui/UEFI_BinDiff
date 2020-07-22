@@ -51,6 +51,11 @@ IMAGE_FILE_MACHINE_IA64 = 0x8664
 IMAGE_FILE_MACHINE_I386 = 0x014c
 
 
+def call(command: list):
+    os.system(' '.join(command + ['>', 'NUL']))
+    return True
+
+
 def get_num_le(bytearr):
     num_le = 0
     for i in range(len(bytearr)):
@@ -97,9 +102,7 @@ def analyse_module(module_path, scr_path, idat, idat64):
         idat_path = idat64
     else:
         return False
-    cmd = ' '.join([idat_path, '-c -A -S{}'.format(scr_path), module_path])
-    # analyse module in batch mode
-    os.system(cmd)
+    call([idat_path, '-c -A -S{}'.format(scr_path), module_path])
     if not (os.path.isfile('{}.i64'.format(module_path))
             or os.path.isfile('{}.idb'.format(module_path))):
         print('[ERROR] module: {}'.format(module_path))
