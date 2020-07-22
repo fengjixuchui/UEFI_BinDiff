@@ -1,6 +1,5 @@
 {
-    "EFI_MODULES": "debug-efi-elf-modules",
     "ANALYSER_PATH" : "idc\\analyse_and_exit.py",
-    "IDA_PATH" : "C:\\Program Files\\IDA Pro 7.4\\ida.exe",
-    "IDA64_PATH" : "C:\\Program Files\\IDA Pro 7.4\\ida64.exe"
+    "IDA_PATH" : "C:\\Program Files\\IDA Pro 7.5\\idat.exe",
+    "IDA64_PATH" : "C:\\Program Files\\IDA Pro 7.5\\idat64.exe"
 }

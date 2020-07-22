@@ -14,7 +14,8 @@ __pycache__/
 
 # Directories
 .vscode/
-debug-efi-elf-modules/
+efi_modules
+edk2/
 
 # Files
-# config.json
+config.json

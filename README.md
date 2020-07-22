@@ -5,15 +5,13 @@
 - [Introduction](#introduction)
 - [Software](#software)
 - [Usage](#usage)
-  - [idb and i64 files generation](#idb-and-i64-files-generation)
+  - [i64 files generation](#i64-files-generation)
   - [Analysing release versions of UEFI images with BinDiff IDA plugin](#analysing-release-versions-of-uefi-images-with-bindiff-ida-plugin)
 - [Conclusion](#conclusion)
 
 # Introduction
 
 In fact, most real UEFI firmwares are building using [edk2](https://github.com/tianocore/edk2). Thus, to simplify the analysis, we can match debug versions of UEFI images with release versions from real firmware using [BinDiff](https://www.zynamics.com/bindiff.html).
-
-`debug-efi-elf-modules` directory contains some UEFI images with debugging information that were obtained when building `MdeModulePkg` and `OvmfPkg` packages from [edk2](https://github.com/tianocore/edk2).
 
 # Software
 
@@ -22,13 +20,28 @@ In fact, most real UEFI firmwares are building using [edk2](https://github.com/t
 
 # Usage
 
-## idb and i64 files generation
+## i64 files generation
 
-* extract `debug-efi-elf-modules` directory from `debug-efi-elf-modules.7z` archive
-* copy `analyse_and_exit.py` script to `idc` IDA directory (for example: `C:\Program Files\IDA Pro 7.4\idc`)
+* clone this repo and update submodules
+
+    ```bash
+    git clone https://github.com/yeggor/UEFI_BinDiff
+    cd UEFI_BinDiff
+    git submodule update --init --recursive
+    ```
+
+* copy `analyse_and_exit.py` script to `idc` IDA directory (for example: `C:\Program Files\IDA Pro 7.5\idc`)
 * check values in `config.json` file
-* run the `gen_idbs.py` script to generate `idb` and `i64` files
-    - after the script runs, you should see the IDA database files next to each `.debug` file
+* build efi modules with debug information
+
+    * open Developer Command Prompt for VS
+    * run `python edk2_build.py` from `UEFI_BinDiff` directory
+    * if everything went well, you should see the `efi_modules` directory with `.efi` files
+    * otherwise, you need to look for the reason [here](https://github.com/tianocore/tianocore.github.io/wiki/Getting-Started-with-EDK-II)
+
+* run `python gen_idbs.py efi_modules` script to generate `i64` files
+
+    * after the script end, you should see the IDA database files next to each `.efi` file
 
 ## Analysing release versions of UEFI images with BinDiff IDA plugin
 
@@ -38,8 +51,10 @@ If the plugin is installed:
 
 * open UEFI module in IDA
 * `File` - `BinDiff`
-    * choose `.debug.idb` or `.debug.i64` file with similar name from `debug-efi-elf-modules` directory 
-    * for example, for `DxeCore` `X64` file choose `debug-efi-elf-modules\X64\MdeModule\DxeCore.debug.i64` or `debug-efi-elf-modules\X64\Ovmf\DxeCore.debug.i64` file
+
+    * choose `.efi.i64` file with similar name from `efi_modules` directory 
+    * for example, for `DxeCore` file choose `efi_modules\DxeCore.i64` file
+
 * you can import symbols and comments in `Matched Functions` window
 
     ![matched-functions](https://raw.githubusercontent.com/yeggor/UEFI_BinDiff/master/img/matched-functions.png)
